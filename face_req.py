@@ -1,24 +1,37 @@
+from unittest import result
 from deepface import DeepFace
 from deepface.detectors import FaceDetector
 from deepface.commons import functions, distance as dst
+from expression_model.get_model import arch_01, class_names
+from expression_model.inference import predict
 import bbox_visualizer as bbv
 import pandas as pd
 import os
 import cv2
 import tqdm
+import numpy as np
 
-def build_models(model_name="dlib", detector_model="opencv"):
+def build_models(model_name="dlib", 
+                 detector_model="opencv", 
+                 expression_model=arch_01):
     # step 0, initiate model
     model = DeepFace.build_model(model_name)
-    print(model_name," is built")
     face_detector = FaceDetector.build_model(detector_model)
+    if expression_model is not None:
+        exp_model = expression_model()
+    return model, face_detector, exp_model
 
-    return model, face_detector
+def predic_expression(imgs_input, exp_model, class_list):
+    result = []
+    for face, (x,y,w,h) in imgs_input:
+        exp_class, confidence = predict(face, exp_model, class_list)
+        result.append([exp_class, confidence])
+    return result
 
-def det_face(img, face_detector):
-    faces = FaceDetector.detect_faces(face_detector, detector_backend="opencv", 
+def det_face(img, face_detector, detector_backend="opencv"):
+    faces = FaceDetector.detect_faces(face_detector, detector_backend=detector_backend, 
                                       img=img, align = False)
-    return faces # face and xywh
+    return faces # [face, xywh]
 
 def encode_representation(img, model):
     preprocessed_img = functions.preprocess_face(img = img, 
@@ -112,9 +125,9 @@ def recog_face(data_frame, faces, model, distance_metric="cosine", max_distance 
                 best_distance = candidate['distance']
                 return face_name, best_distance
 
-    # if data_frame.shape[0] > 0:
-    #     pass
-    # else: print("There's no face to verify")
+    if data_frame.shape[0] <= 0:
+        print("There's no face to verify")
+        return None, "Warning!, there's no face to verify"
     
     result= []
     for face, (x,y,w,h) in faces:
@@ -122,12 +135,53 @@ def recog_face(data_frame, faces, model, distance_metric="cosine", max_distance 
         face_name, distance = compare_faces(face)
         if distance < max_distance:
             # [status, name, distance]
-            result.append(["known", face_name, distance, list(xyxy)])
-        else: result.append(["unknown", face_name, distance, list(xyxy)])
+            result.append(["known", face_name, distance, np.array(xyxy)])
+        else: result.append(["unknown", face_name, distance, np.array(xyxy)])
     return result
 
 input_shape = (150,150)
 input_shape_x, input_shape_y = input_shape
+
+def get_image(im_src, max_w_or_h=200):
+    if os.path.isfile(im_src):
+        im = cv2.imread(im_src)
+        im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
+    elif isinstance(im_src, np.ndarray):
+        im = im_src
+    else: raise TypeError("Image type is not supported")
+
+    if max_w_or_h is None:
+        return im
+    
+    im_org = im.copy()
+    h, w, _ = im.shape
+    if h > max_w_or_h or w > max_w_or_h:
+        if w > h :
+            down_scale = max_w_or_h/w
+            h = int(down_scale*h)
+            im = cv2.resize(im, (max_w_or_h, h), interpolation=cv2.INTER_AREA)
+        elif h > w :
+            down_scale = max_w_or_h/h
+            w = int(down_scale*w)
+            im = cv2.resize(im, (w, max_w_or_h), interpolation=cv2.INTER_AREA)
+
+        return im, down_scale, im_org
+
+def save_im(im, im_name):
+    im = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
+    cv2.imwrite(im_name, im)
+
+def xywh_to_xyxy(x,y,w,h):
+    return (x), (y), (x+w), (y+h)
+
+def draw_boxes(img, res_data: pd.DataFrame, label_col="name", color=(255,255,255), upscale=1):
+    up_scaled_bbox = (np.array(res_data["box"].to_list()))*((upscale))
+    up_scaled_bbox = up_scaled_bbox.astype(int)
+    img = bbv.draw_multiple_rectangles(img, up_scaled_bbox, bbox_color=color)
+    img = bbv.add_multiple_labels(img, res_data[label_col].tolist(), up_scaled_bbox, text_bg_color=color)
+    img = bbv.add_multiple_T_labels(img, res_data["expression"].tolist(), up_scaled_bbox)
+
+    return img
 
 settings = {
     "model": "Dlib",
@@ -135,42 +189,27 @@ settings = {
     "distance_metric": "consine" 
 }
 
-def get_image(im_path):
-    im = cv2.imread(im_path)
-    im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
-    h, w, _ = im.shape
-    # if h > 200 or w > 200:
-    #     if w > h :
-    #         h = int((200/w)*h)
-    #         im = cv2.resize(im, (200, h), interpolation=cv2.INTER_AREA)
-    #     elif h > w :
-    #         w = int((200/h)*w)
-    #         im = cv2.resize(im, (w, 200), interpolation=cv2.INTER_AREA)
-
-    return im
-
-def save_im(im, im_name):
-    im = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
-    cv2.imwrite(im_name, im)
-
-def xywh_to_xyxy(x,y,w,h):
-    return int(x), int(y), int(x+w), int(y+h)
-
 if __name__=="__main__":    
-    model_name = "Dlib"
-    detector_model = "opencv"
-    model, face_det_model = build_models(model_name, detector_model)
+    model_name = settings["model"]
+    detector_model = settings["detector_model"]
+    model, face_det_model, exp_rec_model = build_models(model_name, detector_model)
 
     emb_data = create_representation_dataframe(model, faces_dir="./people")
-    
+
     # start detection
-    im = get_image("./unknown_group.jpg")
-    detected_faces = det_face(im, face_det_model)
+    im, dw_scale, im_original = get_image("people/ben_affleck/ben_aff03.jpg")
+    detected_faces = det_face(im, face_det_model, detector_backend=detector_model)
     res = recog_face(data_frame=emb_data, faces=detected_faces, model=model)
+    exp = predic_expression(detected_faces, exp_rec_model, class_list=class_names)
 
-    res = pd.DataFrame(res, columns=["status", "name", "distance", "box"])
-
-    im = bbv.draw_multiple_rectangles(im, res["box"].tolist())
-    im = bbv.add_multiple_labels(im, res["name"].tolist(), res["box"].tolist())
-    print(res["box"])
-    save_im(im, "./detection_result.jpg")
+    if res[0] is not None:
+        res = pd.DataFrame(res, columns=["status", "name", "distance", "box"])
+        exp = pd.DataFrame(exp, columns=["expression", "exp_score"])
+        res = pd.concat([res,exp], axis=1)
+        print(res)
+        res_known = res.loc[res["status"] == "known"]
+        res_unknown = res.loc[res["status"] == "unknown"]
+        im = draw_boxes(im_original, res_known, upscale=1/dw_scale)
+        im = draw_boxes(im, res_unknown, label_col="status", color=(255,50,10), upscale=1/dw_scale)
+        save_im(im, "./detection_result.jpg")
+    else: print(res[1])
