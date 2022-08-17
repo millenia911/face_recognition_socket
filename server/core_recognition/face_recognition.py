@@ -1,4 +1,3 @@
-from unittest import result
 from deepface import DeepFace
 from deepface.detectors import FaceDetector
 from deepface.commons import functions, distance as dst
@@ -152,7 +151,7 @@ def get_image(im_src, max_w_or_h=200):
 
     if max_w_or_h is None:
         return im
-    
+    down_scale=1
     im_org = im.copy()
     h, w, _ = im.shape
     if h > max_w_or_h or w > max_w_or_h:
@@ -189,15 +188,15 @@ settings = {
     "distance_metric": "consine" 
 }
 
-if __name__=="__main__":    
-    model_name = settings["model"]
-    detector_model = settings["detector_model"]
-    model, face_det_model, exp_rec_model = build_models(model_name, detector_model)
+model_name = settings["model"]
+detector_model = settings["detector_model"]
+model, face_det_model, exp_rec_model = build_models(model_name, detector_model)
 
-    emb_data = create_representation_dataframe(model, faces_dir="./people")
+emb_data = create_representation_dataframe(model, faces_dir="./people")
 
+def main_recognition(img):    
     # start detection
-    im, dw_scale, im_original = get_image("people/ben_affleck/ben_aff03.jpg")
+    im, dw_scale, im_original = get_image(img)
     detected_faces = det_face(im, face_det_model, detector_backend=detector_model)
     res = recog_face(data_frame=emb_data, faces=detected_faces, model=model)
     exp = predic_expression(detected_faces, exp_rec_model, class_list=class_names)
@@ -206,10 +205,13 @@ if __name__=="__main__":
         res = pd.DataFrame(res, columns=["status", "name", "distance", "box"])
         exp = pd.DataFrame(exp, columns=["expression", "exp_score"])
         res = pd.concat([res,exp], axis=1)
-        print(res)
+        print(res.to_dict())
         res_known = res.loc[res["status"] == "known"]
         res_unknown = res.loc[res["status"] == "unknown"]
         im = draw_boxes(im_original, res_known, upscale=1/dw_scale)
         im = draw_boxes(im, res_unknown, label_col="status", color=(255,50,10), upscale=1/dw_scale)
-        save_im(im, "./detection_result.jpg")
-    else: print(res[1])
+        # save_im(im, "./detection_result.jpg")
+        return im, res.to_json()
+    else: 
+        print(res[1])
+        return res
