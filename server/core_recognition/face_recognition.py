@@ -205,7 +205,6 @@ def main_recognition(img):
         res = pd.DataFrame(res, columns=["status", "name", "distance", "box"])
         exp = pd.DataFrame(exp, columns=["expression", "exp_score"])
         res = pd.concat([res,exp], axis=1)
-        print(res.to_dict())
         res_known = res.loc[res["status"] == "known"]
         res_unknown = res.loc[res["status"] == "unknown"]
         im = draw_boxes(im_original, res_known, upscale=1/dw_scale)
