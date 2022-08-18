@@ -4,9 +4,6 @@ import socketio
 
 sio = socketio.Client()
 ret_img = None
-# blank_image = np.zeros(shape=[480, 640, 3], dtype=np.uint8)
-# cv2.imshow("frame", blank_image)
-
 
 def convert_picture(path):
     if os.path.isfile(path):
@@ -40,8 +37,6 @@ def get_result(data, image_byte):
     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     ret_img = img
     state = "response_recieved"
-    # cv2.imshow('frame', ret_img)
-    # cv2.imwrite('frame.jpg', ret_img)
 rand_num = random.randint(1, 100000)
 sio.connect("http://127.0.0.1:8888", wait_timeout=200, namespaces=["/stream"])
 print("SID is ", sio.sid)
@@ -54,7 +49,6 @@ while(vid.isOpened()):
         _, frame = vid.read()
         state = "transmitting"
         stream_transmit_event(frame)
-    # cv2.imshow('frame', frame)
     cv2.imshow(f'frame{rand_num}', frame)
     while(state == "transmitting"): pass
     tic = time.perf_counter()
@@ -63,7 +57,6 @@ while(vid.isOpened()):
             cv2.imshow(f'frame_res{rand_num}', ret_img)
     print("FPS = ", round(1/(tic-toc), 3))
 
-    # time.sleep(0.9)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
   
