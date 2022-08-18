@@ -1,0 +1,9 @@
+*.jpg
+*.png
+*pkl
+templates
+*.ipynb
+*temp
+__pycache__
+ckpt0001
+.zip
