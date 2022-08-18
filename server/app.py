@@ -10,6 +10,9 @@ app.debug = True
 socketio = SocketIO(app, async_mode="eventlet", logger=True, 
                     engineio_logger=True, max_http_buffer_size=100000000)
 
+@app.route("/")
+def hello_world():
+    return "<p>Hello, World!</p>"
 
 socketio.on_namespace(AdminPage("/admin"))
 socketio.on_namespace(StreamPage("/stream"))
@@ -27,4 +30,4 @@ def disconnect_response():
 
 
 if __name__ == "__main__":
-    socketio.run(app, port=5000)
+    socketio.run(app, port=8888)

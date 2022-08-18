@@ -1,3 +1,4 @@
+from mimetypes import init
 from deepface import DeepFace
 from deepface.detectors import FaceDetector
 from deepface.commons import functions, distance as dst
@@ -141,7 +142,7 @@ def recog_face(data_frame, faces, model, distance_metric="cosine", max_distance 
 input_shape = (150,150)
 input_shape_x, input_shape_y = input_shape
 
-def get_image(im_src, max_w_or_h=200):
+def get_image(im_src, max_w_or_h=300):
     if os.path.isfile(im_src):
         im = cv2.imread(im_src)
         im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
@@ -188,16 +189,17 @@ settings = {
     "distance_metric": "consine" 
 }
 
-model_name = settings["model"]
-detector_model = settings["detector_model"]
-model, face_det_model, exp_rec_model = build_models(model_name, detector_model)
-
-emb_data = create_representation_dataframe(model, faces_dir="./people")
+def init_embedding_data():
+    global model, face_det_model, exp_rec_model, emb_data
+    model, face_det_model, exp_rec_model = build_models(model_name, detector_model)
+    emb_data = create_representation_dataframe(model, faces_dir="./people")
 
 def main_recognition(img):    
     # start detection
     im, dw_scale, im_original = get_image(img)
     detected_faces = det_face(im, face_det_model, detector_backend=detector_model)
+    if len(detected_faces) <= 0:
+        return im_original, "no_face_found"
     res = recog_face(data_frame=emb_data, faces=detected_faces, model=model)
     exp = predic_expression(detected_faces, exp_rec_model, class_list=class_names)
 
@@ -214,3 +216,7 @@ def main_recognition(img):
     else: 
         print(res[1])
         return res
+
+model_name = settings["model"]
+detector_model = settings["detector_model"]
+init_embedding_data()

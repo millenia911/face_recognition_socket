@@ -26,7 +26,7 @@ class StreamPage(Namespace):
             disconnect()
         dc()
 
-    def on_transmit_img(self, image_bytes):
+    def on_transmit_img(self, image_bytes, with_image=1):
         if not self.is_valid_data([image_bytes]):
             print("failed to process data")
             self.emit_admin_event_message(status="failed", 
@@ -37,19 +37,19 @@ class StreamPage(Namespace):
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         img_out, data = None, None
-        try:
-            img_out, data = main_recognition(img)
-        except Exception as e:
-            print("--------Recognition Failed--------")
-            print(e)
-        self.inference_result_event(img_out, data)
+        img_out, data = main_recognition(img)
+        # print("--------Recognition Failed--------")
+        self.inference_result_event(img_out, data, with_image)
     
-    def inference_result_event(self, img, data):
+    def inference_result_event(self, img, data, with_image=1):
         if not self.is_valid_data([img, data]):
             print("Img or data return empty or None")
             self.emit_admin_event_message(status="failed",
                                           msg="Failed to process face recognition")
             raise ValueError("Img or data return empty or None")
         
-        _, img = cv2.imencode(".jpg", img)
-        emit("inference_result", (data, img.tobytes()))
+        if with_image:
+            _, img = cv2.imencode(".jpg", img)
+            emit("inference_result", (data, img.tobytes()))
+        else:
+            emit("inference_result", (data, 0))

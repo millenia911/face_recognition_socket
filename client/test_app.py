@@ -56,7 +56,7 @@ def get_result(data, image_byte):
     #_ = cv2.imwrite(os.path.join(pic_path, f"result_{random.randint(1, 100000)}.jpg"), img)
     # sio.emit("disconnect_request", namespace="/stream")  
 
-sio.connect("http://127.0.0.1:5000", wait_timeout=200, namespaces=["/stream"])
+sio.connect("https://0aca-114-4-215-245.ap.ngrok.io/", wait_timeout=200, namespaces=["/stream"])
 print("SID is ", sio.sid)
 def main_process2():
     stream_transmit_event("/home/millenia/code/face_rek/client/tom_lizzie.jpg")

@@ -35,6 +35,9 @@ class AdminPage(Namespace):
         os.makedirs(pic_path, exist_ok=True)
         _ = cv2.imwrite(os.path.join(pic_path, f"{name}_{random.randint(1, 100000)}.jpg"), img)
 
+    def on_refresh_emb_data(self, data=None):
+        pass
+
     def on_delete_person(self, name):
         # TODO: TEST THIS, DONT FORGET
         # TODO: delete on embedding pickle and restart emb dataframe on inference
@@ -48,6 +51,7 @@ class AdminPage(Namespace):
         else:
             self.emit_admin_event_message(status="failed",
                                           msg="Name is not found")
+
     def on_disconnect_request(data=None):
         @copy_current_request_context
         def dc():
