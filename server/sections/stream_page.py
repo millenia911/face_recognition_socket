@@ -35,7 +35,7 @@ class StreamPage(Namespace):
         
         nparr = np.frombuffer(image_bytes, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        # img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         img_out, data = None, None
         img_out, data = main_recognition(img)
         # print("--------Recognition Failed--------")
@@ -50,6 +50,6 @@ class StreamPage(Namespace):
         
         if with_image:
             _, img = cv2.imencode(".jpg", img)
-            emit("inference_result", (data, img.tobytes()))
+            emit("inference_result", (data, img.tobytes()), broadcast=True)
         else:
             emit("inference_result", (data, 0))

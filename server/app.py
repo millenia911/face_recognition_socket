@@ -3,14 +3,14 @@ from flask_socketio import SocketIO, disconnect
 from sections.admin_page import AdminPage
 from sections.stream_page import StreamPage
 import uuid, cv2, os, random, json, base64
-from io import BytesIO
 import numpy as np
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = str(uuid.uuid4())
 app.debug = True
 socketio = SocketIO(app, async_mode="eventlet", logger=True, 
-                    engineio_logger=True, max_http_buffer_size=100000000)
+                    engineio_logger=True, max_http_buffer_size=100000000,
+                    cors_allowed_origins="*")
 
 @app.route("/")
 def hello_world():

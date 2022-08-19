@@ -5,6 +5,7 @@ import jsonpickle
 from streamlit import session_state as sess
 
 sio = socketio.Client()
+html_page = open("./stream.html", "r")
 
 def init_session_states():
     state_list = ["role", "socket_connected"]
@@ -33,14 +34,25 @@ def admin_page():
                 num = (int(100/len(files)))
                 for n, f in enumerate(files):
                     data_bytes = f.getvalue()
-                    submit_image(name, data_bytes)
+                    _, status = submit_image(name, data_bytes)
+                    if status != 200:
+                        st.warning(f"Something is wrong when uploading {f.name}")
+                        continue
                     pbar.progress((n+1)*num)
-                st.info(F"Pictures for {name} is submited!")
+                st.success(F"Pictures for {name} is submited!")
             else: st.warning("Image should be attached and name must be longer than 3 character")
-    pass
+            
+    _back = st.button("Back")
+    if _back:
+        sess["role"] = None
+        st.experimental_rerun()
 
 def streamer_page():
-    pass
+    st.components.v1.html(html_page.read(), height=500)
+    _back = st.button("Back")
+    if _back:
+        sess["role"] = None
+        st.experimental_rerun()
 
 def submit_image(name, img_bytes:bytes):
     print("sending picture for", name)
@@ -61,10 +73,8 @@ def connect_socketio():
 
 if __name__ == "__main__":
     init_session_states()
-    # connect_socketio()
     if sess["socket_connected"]:
         st.text("connected to socketio server")
-    # else: connect_socketio()
     if sess["role"] is None:
         login_page()
 
