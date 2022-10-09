@@ -1,20 +1,35 @@
 from flask import Flask, request, copy_current_request_context, Response
+# from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO, disconnect
 from sections.admin_page import AdminPage
 from sections.stream_page import StreamPage
+from datetime import datetime
 import uuid, cv2, os, random, json, base64
 import numpy as np
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = str(uuid.uuid4())
+# app.config["SQLALCHEMY_DATABASE_URI"] = 'sqlite:///detectionhistory.db'
 app.debug = True
-socketio = SocketIO(app, async_mode="eventlet", logger=True, 
+# db = SQLAlchemy(app)
+# TODO: finish database feature
+# class History(db.Model):
+#     date = db.Column(db.DateTime, default=datetime.now)
+#     status = db.Column(db.String(20))
+#     name = db.Column(db.String(80))
+#     distance = db.Column(db.Float)
+#     box = None
+#     expression = db.Column(db.String(20))
+#     exp_score = db.Column(db.Float)
+
+# TODO: fix 'async_mode', currently failed for gevent, eventlet, wsgi
+socketio = SocketIO(app, async_mode='threading', logger=True, 
                     engineio_logger=True, max_http_buffer_size=100000000,
                     cors_allowed_origins="*")
 
 @app.route("/")
 def hello_world():
-    return "<p>Hello, World!</p>"
+    return "<p>Hello!</p>"
 
 @app.route("/api/admin", methods=["POST"])
 def submit_picture_request():
