@@ -32,10 +32,10 @@ def stream_transmit_event(img, namespace="/stream"):
 @sio.on("inference_result", namespace="/stream")
 def get_result(data, image_byte):
     global ret_img, state
-    nparr = np.frombuffer(image_byte, np.uint8)
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-    ret_img = img
+    # nparr = np.frombuffer(image_byte, np.uint8)
+    # img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    # # img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+    # ret_img = img
     state = "response_recieved"
 rand_num = random.randint(1, 100000)
 sio.connect("http://127.0.0.1:8888", wait_timeout=200, namespaces=["/stream"])
@@ -43,23 +43,27 @@ print("SID is ", sio.sid)
 vid = cv2.VideoCapture(0)
 state = "response_recieved"
 
-while(vid.isOpened()):
-    toc = time.perf_counter()
-    if state == "response_recieved":
-        _, frame = vid.read()
-        state = "transmitting"
-        stream_transmit_event(frame)
-    cv2.imshow(f'frame{rand_num}', frame)
-    while(state == "transmitting"): pass
-    tic = time.perf_counter()
-    if ret_img is not None:
-        if len(ret_img) > 0:
-            cv2.imshow(f'frame_res{rand_num}', ret_img)
-    print("FPS = ", round(1/(tic-toc), 3))
+try:
+    while(vid.isOpened()):
+        toc = time.perf_counter()
+        if state == "response_recieved":
+            _, frame = vid.read()
+            state = "transmitting"
+            stream_transmit_event(frame)
+        # cv2.imshow(f'frame{rand_num}', frame)
+        # while(state == "transmitting"): pass
+        tic = time.perf_counter()
+        if ret_img is not None:
+            if len(ret_img) > 0:
+                cv2.imshow(f'frame_res{rand_num}', ret_img)
+        print("FPS = ", round(1/(tic-toc), 3), " T = ", round(tic-toc, 3))
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-  
-vid.release()
-cv2.destroyAllWindows()
-sio.disconnect()
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+except KeyboardInterrupt as e:
+    print(e)
+
+finally:
+    vid.release()
+    # cv2.destroyAllWindows()
+    sio.disconnect()
