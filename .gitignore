@@ -9,3 +9,5 @@ ckpt0001
 *.zip
 *.jpeg
 .vscode
+converter
+!server/expression_model/tf2onnx_converter.ipynb
