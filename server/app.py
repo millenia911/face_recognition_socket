@@ -23,7 +23,7 @@ app.debug = True
 #     exp_score = db.Column(db.Float)
 
 # TODO: fix 'async_mode', currently failed for gevent, eventlet, wsgi
-socketio = SocketIO(app, async_mode='threading', logger=True, 
+socketio = SocketIO(app, logger=True, 
                     engineio_logger=True, max_http_buffer_size=100000000,
                     cors_allowed_origins="*")
 

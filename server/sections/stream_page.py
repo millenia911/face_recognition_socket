@@ -1,7 +1,7 @@
 from flask import copy_current_request_context
 from flask_socketio import Namespace, emit, disconnect
 from core_recognition.face_recognition import main_recognition
-import cv2, numpy as np
+import cv2, numpy as np, time
 
 class StreamPage(Namespace):
     def __init__(self, namespace="/"):
@@ -32,7 +32,7 @@ class StreamPage(Namespace):
             self.emit_admin_event_message(status="failed", 
                                             msg="Image cannot be none or zero lenght")
             return
-        
+        start = time.perf_counter()
         nparr = np.frombuffer(image_bytes, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         # img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
@@ -40,6 +40,7 @@ class StreamPage(Namespace):
         img_out, data = main_recognition(img)
         # print("--------Recognition Failed--------")
         self.inference_result_event(img_out, data, with_image)
+        print(f"ON_TRANSMIT LATENCY: {time.perf_counter() - start}")
     
     def inference_result_event(self, img, data, with_image=1):
         if not self.is_valid_data([img, data]):
@@ -47,9 +48,10 @@ class StreamPage(Namespace):
             self.emit_admin_event_message(status="failed",
                                           msg="Failed to process face recognition")
             raise ValueError("Img or data return empty or None")
-        
+        start = time.perf_counter()
         if with_image:
             _, img = cv2.imencode(".jpg", img)
             emit("inference_result", (data, img.tobytes()), broadcast=True)
         else:
             emit("inference_result", (data, 0))
+        print(f"RESULT_TRANSMIT LATENCY: {time.perf_counter() - start}")

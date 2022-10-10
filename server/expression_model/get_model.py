@@ -4,9 +4,14 @@ from tensorflow.keras import Model
 from tensorflow_addons import losses as tfa_losses
 import numpy as np
 import os
+from .onnx_model_loader import ONNXModel
 
 class_names = ['angry', 'disgust', 'fear', 'happy', 'neutral', 'sad', 'surprise']
 dir_path = os.path.dirname(os.path.realpath(__file__))
+
+# TODO: Refactor
+arch_01_ONNX = ONNXModel()
+arch_01_ONNX_model = arch_01_ONNX.model
 
 def arch_01():
     backbone = tf.keras.applications.efficientnet.EfficientNetB0(

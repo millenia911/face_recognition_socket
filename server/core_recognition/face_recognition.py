@@ -1,8 +1,7 @@
-from mimetypes import init
 from deepface import DeepFace
 from deepface.detectors import FaceDetector
 from deepface.commons import functions, distance as dst
-from expression_model.get_model import arch_01, class_names
+from expression_model.get_model import arch_01, class_names, arch_01_ONNX_model
 from expression_model.inference import predict
 import bbox_visualizer as bbv
 import pandas as pd
@@ -13,12 +12,13 @@ import numpy as np
 
 def build_models(model_name="dlib", 
                  detector_model="opencv", 
-                 expression_model=arch_01):
+                 expression_model=arch_01_ONNX_model):
     # step 0, initiate model
     model = DeepFace.build_model(model_name)
     face_detector = FaceDetector.build_model(detector_model)
     if expression_model is not None:
-        exp_model = expression_model()
+        # exp_model = expression_model()
+        exp_model = expression_model
     return model, face_detector, exp_model
 
 def predic_expression(imgs_input, exp_model, class_list):
@@ -97,6 +97,7 @@ def create_representation_dataframe(model, data_dir="./", faces_dir="./faces"):
 def recog_face(data_frame, faces, model, distance_metric="cosine", max_distance = 0.07):
     """return: faces and their name for one picture"""
     def compare_faces(img, data_frame=data_frame):
+        # return 'saha', .07
         preprocessed_img = functions.preprocess_face(img=img, 
                                                      target_size = (input_shape_y, input_shape_x), 
                                                      enforce_detection = False, 
@@ -183,25 +184,26 @@ def draw_boxes(img, res_data: pd.DataFrame, label_col="name", color=(255,255,255
 
     return img
 
-settings = {
-    "model": "Dlib",
-    "detector_model": "opencv",
-    "distance_metric": "consine" 
-}
-
 def init_embedding_data():
     global model, face_det_model, exp_rec_model, emb_data
     model, face_det_model, exp_rec_model = build_models(model_name, detector_model)
     emb_data = create_representation_dataframe(model, faces_dir="./people")
 
+import time
 def main_recognition(img):    
     # start detection
+    start = time.perf_counter()
+
     im, dw_scale, im_original = get_image(img)
     detected_faces = det_face(im, face_det_model, detector_backend=detector_model)
     if len(detected_faces) <= 0:
         return im_original, "no_face_found"
     res = recog_face(data_frame=emb_data, faces=detected_faces, model=model)
+    print(f"RECOG LATENCY = {time.perf_counter() - start}")
+    start2 = time.perf_counter()
     exp = predic_expression(detected_faces, exp_rec_model, class_list=class_names)
+    print(f"EXP2 LATENCY = {time.perf_counter() - start2}")
+    print(f"OVERALL LATENCY = {time.perf_counter() - start}")
 
     if res[0] is not None:
         res = pd.DataFrame(res, columns=["status", "name", "distance", "box"])
@@ -217,6 +219,13 @@ def main_recognition(img):
         print(res[1])
         return res
 
+settings = {
+    "model": "Dlib",
+    "detector_model": "opencv",
+    "distance_metric": "consine" 
+}
+
+# TODO: REFACTOR!
 model_name = settings["model"]
 detector_model = settings["detector_model"]
 init_embedding_data()
